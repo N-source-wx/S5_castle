@@ -3,46 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動式攻城地圖 - 指定配色版</title>
+    <title>賽季攻城地圖&分數計算器</title>
     <style>
         :root {
-            /* 家族著色顏色 */
+            /* 家族著色顏色 (RGB) */
             --orange: rgb(232, 149, 73);
             --green: rgb(82, 240, 104);
             --blue: rgb(150, 160, 255);
             --lightblue: rgb(181, 205, 243);
             
-            /* 您指定的底圖預設 RGB */
+            /* 指定底圖預設 RGB */
             --layer-0-1: rgb(140, 95, 60);
             --layer-2-3: rgb(150, 120, 70);
             --layer-4: rgb(200, 175, 125);
             
-            --stroke: rgba(0, 0, 0, 0.3);
+            --stroke: rgba(0, 0, 0, 0.25);
         }
 
         body {
-            font-family: -apple-system, sans-serif;
+            font-family: -apple-system, "Microsoft JhengHei", sans-serif;
             margin: 0;
             padding: 15px;
-            background-color: #f0f2f5;
+            background-color: #f4f6f8;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
             touch-action: manipulation;
             user-select: none;
         }
 
-        .header { width: 100%; max-width: 600px; margin-bottom: 15px; text-align: center; }
-        .picker-label { font-size: 14px; font-weight: bold; color: #444; margin-bottom: 10px; }
-        
-        .color-picker { display: flex; justify-content: center; gap: 12px; }
-        .color-btn {
-            width: 55px; height: 55px; border-radius: 12px; border: 3px solid #fff;
-            cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* 標題樣式 */
+        .page-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #2c3e50;
+            margin: 10px 0 20px 0;
+            letter-spacing: 1px;
         }
-        .color-btn.active { border-color: #333; transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
-        .main-container { display: flex; flex-direction: column; width: 100%; max-width: 1100px; gap: 20px; }
+        .header {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .picker-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        
+        .color-picker {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .color-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .color-btn.active {
+            border-color: #2c3e50;
+            transform: scale(1.15);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1000px;
+            gap: 20px;
+            padding-bottom: 60px; /* 為底部署名留白 */
+        }
+
         @media (min-width: 768px) {
             .main-container { flex-direction: row; align-items: flex-start; }
             .map-section { flex: 7; }
@@ -50,44 +94,115 @@
         }
 
         .map-section {
-            background: #fff; padding: 15px; border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            display: flex; justify-content: center; overflow: hidden;
+            background: #fff;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        svg { width: 100%; height: auto; max-width: 550px; touch-action: none; }
+        svg {
+            width: 100%;
+            height: auto;
+            max-width: 500px;
+            touch-action: none;
+        }
 
         .hex {
             stroke: var(--stroke);
-            stroke-width: 1;
-            transition: fill 0.15s ease;
+            stroke-width: 0.8;
+            transition: fill 0.1s ease;
             cursor: pointer;
         }
 
-        /* 套用指定底色 */
+        /* 底色 Class */
         .hex.l01 { fill: var(--layer-0-1); }
         .hex.l23 { fill: var(--layer-2-3); }
         .hex.l4 { fill: var(--layer-4); }
 
-        .score-section { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .score-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0; }
+        .score-section {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .score-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
         .score-item:last-child { border-bottom: none; }
-        .score-color-box { width: 28px; height: 28px; border-radius: 6px; margin-right: 15px; }
-        .score-info { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; }
-        .total-score { font-weight: 900; font-size: 1.4rem; color: #1a1a1a; }
-        .count-badge { background: #f0f2f5; padding: 4px 10px; border-radius: 12px; font-size: 0.9rem; color: #555; font-weight: 600; }
+
+        .score-color-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            margin-right: 15px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        }
+
+        .score-info {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-score {
+            font-weight: 900;
+            font-size: 1.3rem;
+            color: #2c3e50;
+        }
+
+        .count-badge {
+            background: #f1f3f5;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 700;
+        }
 
         .reset-btn {
-            width: 100%; padding: 16px; margin-top: 20px; background: #222; color: white;
-            border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: #343a40;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
         }
-        .reset-btn:active { transform: scale(0.98); background: #444; }
+
+        .reset-btn:active { background: #000; transform: scale(0.98); }
+
+        /* 底部署名 */
+        .footer-signature {
+            position: fixed;
+            bottom: 15px;
+            right: 20px;
+            font-size: 14px;
+            color: #bdc3c7;
+            font-weight: 500;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>
 
+<h1 class="page-title">賽季攻城地圖&分數計算器</h1>
+
 <div class="header">
-    <div class="picker-label">選擇家族顏色</div>
+    <div class="picker-label">選擇顏色</div>
     <div class="color-picker" id="colorPicker">
         <div class="color-btn active" style="background: var(--orange)" data-color="orange"></div>
         <div class="color-btn" style="background: var(--green)" data-color="green"></div>
@@ -107,17 +222,19 @@
     </div>
 </div>
 
+<div class="footer-signature">慕慕懶人包</div>
+
 <script>
     const config = {
         size: 28,
         mapSize: 4,
-        storageKey: 'hex_map_custom_rgb_save',
+        storageKey: 'mumu_hex_map_save',
         colors: {
             orange: 'rgb(232, 149, 73)',
             green: 'rgb(82, 240, 104)',
             blue: 'rgb(150, 160, 255)',
             lightblue: 'rgb(181, 205, 243)',
-            white: 'transparent' // 代表未著色，顯現底色
+            white: 'transparent'
         },
         scoreWeights: { layer0: 5000, layer1: 2200, layer23: 1900, layer4: 1600 }
     };
@@ -159,7 +276,6 @@
                 polygon.setAttribute("id", hex.id);
                 polygon.setAttribute("points", getHexPoints(x, y, config.size));
                 
-                // 指定不同層級的底色 Class
                 let layerClass = "hex ";
                 if (distance <= 1) layerClass += "l01";
                 else if (distance <= 3) layerClass += "l23";
@@ -184,7 +300,6 @@
     }
 
     function updateHexFill(element, owner) {
-        // 如果是 white，設為透明以顯現底層指定 RGB 色
         element.style.fill = (owner === 'white') ? "" : config.colors[owner];
     }
 
@@ -261,7 +376,7 @@
     }
 
     function resetMap() {
-        if (confirm("清空目前所有著色區域？底圖顏色會保留。")) {
+        if (confirm("確定清空所有著色紀錄？")) {
             hexData.forEach(h => {
                 h.owner = 'white';
                 updateHexFill(document.getElementById(h.id), 'white');
