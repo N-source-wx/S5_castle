@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式攻城地圖 - 指定配色版</title>
+    <style>
+        :root {
+            /* 家族著色顏色 */
+            --orange: rgb(232, 149, 73);
+            --green: rgb(82, 240, 104);
+            --blue: rgb(150, 160, 255);
+            --lightblue: rgb(181, 205, 243);
+            
+            /* 您指定的底圖預設 RGB */
+            --layer-0-1: rgb(140, 95, 60);
+            --layer-2-3: rgb(150, 120, 70);
+            --layer-4: rgb(200, 175, 125);
+            
+            --stroke: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .header { width: 100%; max-width: 600px; margin-bottom: 15px; text-align: center; }
+        .picker-label { font-size: 14px; font-weight: bold; color: #444; margin-bottom: 10px; }
+        
+        .color-picker { display: flex; justify-content: center; gap: 12px; }
+        .color-btn {
+            width: 55px; height: 55px; border-radius: 12px; border: 3px solid #fff;
+            cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .color-btn.active { border-color: #333; transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+        .main-container { display: flex; flex-direction: column; width: 100%; max-width: 1100px; gap: 20px; }
+        @media (min-width: 768px) {
+            .main-container { flex-direction: row; align-items: flex-start; }
+            .map-section { flex: 7; }
+            .score-section { flex: 3; position: sticky; top: 20px; }
+        }
+
+        .map-section {
+            background: #fff; padding: 15px; border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: flex; justify-content: center; overflow: hidden;
+        }
+
+        svg { width: 100%; height: auto; max-width: 550px; touch-action: none; }
+
+        .hex {
+            stroke: var(--stroke);
+            stroke-width: 1;
+            transition: fill 0.15s ease;
+            cursor: pointer;
+        }
+
+        /* 套用指定底色 */
+        .hex.l01 { fill: var(--layer-0-1); }
+        .hex.l23 { fill: var(--layer-2-3); }
+        .hex.l4 { fill: var(--layer-4); }
+
+        .score-section { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .score-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0; }
+        .score-item:last-child { border-bottom: none; }
+        .score-color-box { width: 28px; height: 28px; border-radius: 6px; margin-right: 15px; }
+        .score-info { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; }
+        .total-score { font-weight: 900; font-size: 1.4rem; color: #1a1a1a; }
+        .count-badge { background: #f0f2f5; padding: 4px 10px; border-radius: 12px; font-size: 0.9rem; color: #555; font-weight: 600; }
+
+        .reset-btn {
+            width: 100%; padding: 16px; margin-top: 20px; background: #222; color: white;
+            border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer;
+        }
+        .reset-btn:active { transform: scale(0.98); background: #444; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="picker-label">選擇家族顏色</div>
+    <div class="color-picker" id="colorPicker">
+        <div class="color-btn active" style="background: var(--orange)" data-color="orange"></div>
+        <div class="color-btn" style="background: var(--green)" data-color="green"></div>
+        <div class="color-btn" style="background: var(--blue)" data-color="blue"></div>
+        <div class="color-btn" style="background: var(--lightblue)" data-color="lightblue"></div>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="map-section">
+        <svg id="hexMap" viewBox="0 0 500 500"></svg>
+    </div>
+
+    <div class="score-section">
+        <div id="statsBoard"></div>
+        <button class="reset-btn" onclick="resetMap()">重置地圖紀錄</button>
+    </div>
+</div>
+
+<script>
+    const config = {
+        size: 28,
+        mapSize: 4,
+        storageKey: 'hex_map_custom_rgb_save',
+        colors: {
+            orange: 'rgb(232, 149, 73)',
+            green: 'rgb(82, 240, 104)',
+            blue: 'rgb(150, 160, 255)',
+            lightblue: 'rgb(181, 205, 243)',
+            white: 'transparent' // 代表未著色，顯現底色
+        },
+        scoreWeights: { layer0: 5000, layer1: 2200, layer23: 1900, layer4: 1600 }
+    };
+
+    let currentColor = 'orange';
+    let isDrawing = false;
+    let mode = 'paint'; 
+    let hexData = [];
+
+    function init() {
+        const svg = document.getElementById('hexMap');
+        const savedData = localStorage.getItem(config.storageKey);
+        const parsedData = savedData ? JSON.parse(savedData) : null;
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = btn.dataset.color;
+            });
+        });
+
+        for (let q = -config.mapSize; q <= config.mapSize; q++) {
+            const r1 = Math.max(-config.mapSize, -q - config.mapSize);
+            const r2 = Math.min(config.mapSize, -q + config.mapSize);
+            
+            for (let r = r1; r <= r2; r++) {
+                const distance = Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
+                const x = 250 + config.size * (3/2 * q);
+                const y = 250 + config.size * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
+                
+                const id = `hex-${q}-${r}`;
+                const savedOwner = parsedData ? parsedData[id] : 'white';
+
+                const hex = { id, distance, owner: savedOwner };
+                hexData.push(hex);
+                
+                const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                polygon.setAttribute("id", hex.id);
+                polygon.setAttribute("points", getHexPoints(x, y, config.size));
+                
+                // 指定不同層級的底色 Class
+                let layerClass = "hex ";
+                if (distance <= 1) layerClass += "l01";
+                else if (distance <= 3) layerClass += "l23";
+                else layerClass += "l4";
+                
+                polygon.setAttribute("class", layerClass);
+                updateHexFill(polygon, hex.owner);
+                
+                polygon.addEventListener('mousedown', () => handleStart(hex));
+                polygon.addEventListener('mouseenter', () => handleMove(hex));
+                polygon.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(hex); });
+
+                svg.appendChild(polygon);
+            }
+        }
+
+        svg.addEventListener('touchmove', handleTouchMove);
+        window.addEventListener('mouseup', () => { isDrawing = false; saveToLocalStorage(); });
+        window.addEventListener('touchend', () => { isDrawing = false; saveToLocalStorage(); });
+
+        updateStats();
+    }
+
+    function updateHexFill(element, owner) {
+        // 如果是 white，設為透明以顯現底層指定 RGB 色
+        element.style.fill = (owner === 'white') ? "" : config.colors[owner];
+    }
+
+    function saveToLocalStorage() {
+        const dataToSave = {};
+        hexData.forEach(h => { dataToSave[h.id] = h.owner; });
+        localStorage.setItem(config.storageKey, JSON.stringify(dataToSave));
+    }
+
+    function getHexPoints(x, y, s) {
+        let p = "";
+        for (let i = 0; i < 6; i++) {
+            const rad = (Math.PI / 180) * (60 * i);
+            p += `${x + s * Math.cos(rad)},${y + s * Math.sin(rad)} `;
+        }
+        return p;
+    }
+
+    function handleStart(hex) {
+        isDrawing = true;
+        mode = (hex.owner === currentColor) ? 'erase' : 'paint';
+        applyChange(hex, mode === 'erase' ? 'white' : currentColor);
+    }
+
+    function handleMove(hex) {
+        if (!isDrawing) return;
+        if (mode === 'paint') applyChange(hex, currentColor);
+        else if (mode === 'erase' && hex.owner === currentColor) applyChange(hex, 'white');
+    }
+
+    function handleTouchMove(e) {
+        if (!isDrawing) return;
+        const touch = e.touches[0];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target && target.tagName === 'polygon') {
+            const hex = hexData.find(h => h.id === target.id);
+            if (hex) handleMove(hex);
+        }
+    }
+
+    function applyChange(hex, newColor) {
+        if (hex.owner === newColor) return;
+        hex.owner = newColor;
+        updateHexFill(document.getElementById(hex.id), newColor);
+        updateStats();
+    }
+
+    function updateStats() {
+        const stats = { orange: { s: 0, c: 0 }, green: { s: 0, c: 0 }, blue: { s: 0, c: 0 }, lightblue: { s: 0, c: 0 } };
+        hexData.forEach(h => {
+            if (h.owner !== 'white') {
+                let score = 0;
+                if (h.distance === 0) score = config.scoreWeights.layer0;
+                else if (h.distance === 1) score = config.scoreWeights.layer1;
+                else if (h.distance <= 3) score = config.scoreWeights.layer23;
+                else score = config.scoreWeights.layer4;
+                stats[h.owner].s += score;
+                stats[h.owner].c += 1;
+            }
+        });
+        const board = document.getElementById('statsBoard');
+        board.innerHTML = '';
+        Object.keys(stats).forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'score-item';
+            item.innerHTML = `
+                <div class="score-color-box" style="background: ${config.colors[c]}"></div>
+                <div class="score-info">
+                    <span class="total-score">${stats[c].s.toLocaleString()}</span>
+                    <span class="count-badge">${stats[c].c} 區域</span>
+                </div>`;
+            board.appendChild(item);
+        });
+    }
+
+    function resetMap() {
+        if (confirm("清空目前所有著色區域？底圖顏色會保留。")) {
+            hexData.forEach(h => {
+                h.owner = 'white';
+                updateHexFill(document.getElementById(h.id), 'white');
+            });
+            localStorage.removeItem(config.storageKey);
+            updateStats();
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
