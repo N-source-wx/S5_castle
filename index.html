@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>賽季攻城地圖&分數計算器</title>
     <style>
         :root {
@@ -17,13 +17,13 @@
             --layer-2-3: rgb(150, 120, 70);
             --layer-4: rgb(200, 175, 125);
             
-            --stroke: rgba(0, 0, 0, 0.25);
+            --stroke: rgba(0, 0, 0, 0.2);
         }
 
         body {
             font-family: -apple-system, "Microsoft JhengHei", sans-serif;
             margin: 0;
-            padding: 15px;
+            padding: 10px;
             background-color: #f4f6f8;
             display: flex;
             flex-direction: column;
@@ -31,119 +31,140 @@
             min-height: 100vh;
             touch-action: manipulation;
             user-select: none;
+            overflow-x: hidden;
         }
 
-        /* 標題樣式 */
         .page-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 900;
             color: #2c3e50;
-            margin: 10px 0 20px 0;
-            letter-spacing: 1px;
+            margin: 15px 0 10px 0;
+            text-align: center;
         }
 
         .header {
-            width: 100%;
-            max-width: 600px;
+            width: 95%;
             margin-bottom: 20px;
             text-align: center;
         }
 
         .picker-label {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #7f8c8d;
             margin-bottom: 10px;
         }
         
-        .color-picker {
+        /* 控制列布局 */
+        .controls-row {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .color-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            border: 3px solid #fff;
+        /* 統一所有按鈕的基礎樣式 */
+        .control-item {
+            width: 55px;
+            height: 55px;
+            border-radius: 12px;
+            border: 4px solid #fff;
+            box-sizing: border-box; /* 確保邊框包含在寬高內 */
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
         }
 
         .color-btn.active {
             border-color: #2c3e50;
-            transform: scale(1.15);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        /* 重置按鈕專屬外觀，但尺寸與 control-item 一致 */
+        .reset-btn {
+            background: #343a40;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            line-height: 1.2;
+            text-align: center;
+            outline: none;
+        }
+
+        .reset-btn:active {
+            transform: scale(0.9);
+            background: #000;
         }
 
         .main-container {
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 1000px;
-            gap: 20px;
-            padding-bottom: 60px; /* 為底部署名留白 */
-        }
-
-        @media (min-width: 768px) {
-            .main-container { flex-direction: row; align-items: flex-start; }
-            .map-section { flex: 7; }
-            .score-section { flex: 3; position: sticky; top: 20px; }
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 80px;
         }
 
         .map-section {
             background: #fff;
-            padding: 15px;
+            width: 90%;
+            max-width: 600px;
+            padding: 10px;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
             display: flex;
             justify-content: center;
-            overflow: hidden;
+            touch-action: none;
         }
 
         svg {
             width: 100%;
             height: auto;
-            max-width: 500px;
             touch-action: none;
         }
 
         .hex {
             stroke: var(--stroke);
             stroke-width: 0.8;
-            transition: fill 0.1s ease;
             cursor: pointer;
+            transition: fill 0.1s ease;
         }
 
-        /* 底色 Class */
         .hex.l01 { fill: var(--layer-0-1); }
         .hex.l23 { fill: var(--layer-2-3); }
         .hex.l4 { fill: var(--layer-4); }
 
         .score-section {
+            width: 90%;
+            max-width: 600px;
             background: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
 
         .score-item {
             display: flex;
             align-items: center;
-            padding: 15px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #f8f9fa;
         }
 
         .score-item:last-child { border-bottom: none; }
 
         .score-color-box {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 6px;
-            margin-right: 15px;
-            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+            margin-right: 12px;
         }
 
         .score-info {
@@ -155,46 +176,32 @@
 
         .total-score {
             font-weight: 900;
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             color: #2c3e50;
         }
 
         .count-badge {
             background: #f1f3f5;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.85rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
             color: #6c757d;
-            font-weight: 700;
         }
 
-        .reset-btn {
-            width: 100%;
-            padding: 15px;
-            margin-top: 20px;
-            background: #343a40;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .reset-btn:active { background: #000; transform: scale(0.98); }
-
-        /* 底部署名 */
         .footer-signature {
             position: fixed;
-            bottom: 15px;
-            right: 20px;
-            font-size: 14px;
+            bottom: 10px;
+            right: 15px;
+            font-size: 12px;
             color: #bdc3c7;
             font-weight: 500;
-            pointer-events: none;
         }
 
+        @media (min-width: 768px) {
+            .main-container { flex-direction: row; justify-content: center; align-items: flex-start; }
+            .map-section { width: 60%; }
+            .score-section { width: 30%; }
+        }
     </style>
 </head>
 <body>
@@ -202,12 +209,13 @@
 <h1 class="page-title">賽季攻城地圖&分數計算器</h1>
 
 <div class="header">
-    <div class="picker-label">選擇顏色</div>
-    <div class="color-picker" id="colorPicker">
-        <div class="color-btn active" style="background: var(--orange)" data-color="orange"></div>
-        <div class="color-btn" style="background: var(--green)" data-color="green"></div>
-        <div class="color-btn" style="background: var(--blue)" data-color="blue"></div>
-        <div class="color-btn" style="background: var(--lightblue)" data-color="lightblue"></div>
+    <div class="picker-label">選擇顏色 / 重置紀錄</div>
+    <div class="controls-row">
+        <div class="control-item color-btn active" style="background: var(--orange)" data-color="orange"></div>
+        <div class="control-item color-btn" style="background: var(--green)" data-color="green"></div>
+        <div class="control-item color-btn" style="background: var(--blue)" data-color="blue"></div>
+        <div class="control-item color-btn" style="background: var(--lightblue)" data-color="lightblue"></div>
+        <button class="control-item reset-btn" onclick="resetMap()">重置<br>紀錄</button>
     </div>
 </div>
 
@@ -218,7 +226,6 @@
 
     <div class="score-section">
         <div id="statsBoard"></div>
-        <button class="reset-btn" onclick="resetMap()">重置地圖紀錄</button>
     </div>
 </div>
 
@@ -228,7 +235,7 @@
     const config = {
         size: 28,
         mapSize: 4,
-        storageKey: 'mumu_hex_map_save',
+        storageKey: 'mumu_hex_map_save_v4',
         colors: {
             orange: 'rgb(232, 149, 73)',
             green: 'rgb(82, 240, 104)',
@@ -286,13 +293,25 @@
                 
                 polygon.addEventListener('mousedown', () => handleStart(hex));
                 polygon.addEventListener('mouseenter', () => handleMove(hex));
-                polygon.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(hex); });
+                polygon.addEventListener('touchstart', (e) => { 
+                    e.preventDefault(); 
+                    handleStart(hex); 
+                }, {passive: false});
 
                 svg.appendChild(polygon);
             }
         }
 
-        svg.addEventListener('touchmove', handleTouchMove);
+        svg.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target && target.tagName === 'polygon') {
+                const hex = hexData.find(h => h.id === target.id);
+                if (hex) handleMove(hex);
+            }
+        }, {passive: false});
+
         window.addEventListener('mouseup', () => { isDrawing = false; saveToLocalStorage(); });
         window.addEventListener('touchend', () => { isDrawing = false; saveToLocalStorage(); });
 
@@ -330,16 +349,6 @@
         else if (mode === 'erase' && hex.owner === currentColor) applyChange(hex, 'white');
     }
 
-    function handleTouchMove(e) {
-        if (!isDrawing) return;
-        const touch = e.touches[0];
-        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (target && target.tagName === 'polygon') {
-            const hex = hexData.find(h => h.id === target.id);
-            if (hex) handleMove(hex);
-        }
-    }
-
     function applyChange(hex, newColor) {
         if (hex.owner === newColor) return;
         hex.owner = newColor;
@@ -369,7 +378,7 @@
                 <div class="score-color-box" style="background: ${config.colors[c]}"></div>
                 <div class="score-info">
                     <span class="total-score">${stats[c].s.toLocaleString()}</span>
-                    <span class="count-badge">${stats[c].c} 區域</span>
+                    <span class="count-badge">${stats[c].c} 區</span>
                 </div>`;
             board.appendChild(item);
         });
