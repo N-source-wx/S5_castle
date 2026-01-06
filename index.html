@@ -36,7 +36,7 @@
             font-size: clamp(16px, 5.5vw, 24px); 
             font-weight: 900;
             color: #2c3e50;
-            margin: 15px 0 10px 0;
+            margin: 15px 0 15px 0; /* 調整間距 */
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
@@ -47,13 +47,6 @@
             max-width: 600px;
             margin-bottom: 20px;
             text-align: center;
-        }
-
-        .picker-label {
-            font-size: 13px;
-            font-weight: bold;
-            color: #7f8c8d;
-            margin-bottom: 8px;
         }
         
         /* 6按鈕單列配置 */
@@ -192,7 +185,6 @@
 <h1 class="page-title">賽季攻城地圖&分數計算器</h1>
 
 <div class="header">
-    <div class="picker-label">選擇顏色</div>
     <div class="controls-row">
         <div class="control-item color-btn active" style="background: var(--orange)" data-color="orange"></div>
         <div class="control-item color-btn" style="background: var(--green)" data-color="green"></div>
@@ -383,11 +375,8 @@
             const item = document.createElement('div');
             item.className = 'score-item';
             item.innerHTML = `
-                <div class="score-color-box" style="background: ${config.colors[c]}"></div>
-                <div class="score-info">
-                    <span class="total-score">${stats[c].s.toLocaleString()}</span>
-                    <span class="count-badge">${stats[c].c} 區</span>
-                </div>`;
+                <div class=\"score-color-box\" style=\"background: ${config.colors[c]}\"></div>
+                <div class=\"score-info\">\r\n                    <span class=\"total-score\">${stats[c].s.toLocaleString()}</span>\r\n                    <span class=\"count-badge\">${stats[c].c} 區</span>\r\n                </div>`;
             board.appendChild(item);
         });
     }
